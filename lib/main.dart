@@ -54,8 +54,10 @@ class _MainAdaptiveScreenState extends State<MainAdaptiveScreen> {
     super.initState();
     player = Player();
 
-    // Silently restore Drive session on startup
-    driveService.trySilentLogin();
+    // Silently restore Drive session on startup and update UI once restored
+    driveService.trySilentLogin().then((_) {
+      if (mounted) setState(() {});
+    });
 
     player.stream.playing.listen((playing) {
       if (mounted) setState(() => isPlaying = playing);
@@ -72,6 +74,44 @@ class _MainAdaptiveScreenState extends State<MainAdaptiveScreen> {
     player.stream.completed.listen((completed) {
       if (completed) playNext();
     });
+  }
+
+  // Sign out and clear stored OAuth credentials
+  Future<void> signOutDrive() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E24),
+        title: const Text("Disconnect Google Drive"),
+        content: const Text(
+          "Are you sure you want to disconnect? Your saved Google Drive session will be cleared from this device.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text("Disconnect"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await driveService.signOut();
+      setState(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Disconnected from Google Drive."),
+            backgroundColor: Color(0xFF1E1E24),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -315,8 +355,10 @@ class _MainAdaptiveScreenState extends State<MainAdaptiveScreen> {
                 currentIndex: currentIndex,
                 position: position,
                 duration: duration,
+                isDriveConnected: driveService.isAuthenticated, //New
                 onPickFolder: scanFolder,
                 onOpenDrive: openDriveDialog,
+                onSignOutDrive: signOutDrive, //New
                 onSelectSong: playSong,
                 onNext: playNext,
                 onPrevious: playPrevious,

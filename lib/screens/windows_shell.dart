@@ -12,8 +12,10 @@ class WindowsShell extends StatelessWidget {
   final int currentIndex;
   final Duration position;
   final Duration duration;
+  final bool isDriveConnected; // 👈 New
   final VoidCallback onPickFolder;
   final VoidCallback onOpenDrive;
+  final VoidCallback onSignOutDrive; // 👈 New
   final Function(int) onSelectSong;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
@@ -27,8 +29,10 @@ class WindowsShell extends StatelessWidget {
     required this.currentIndex,
     required this.position,
     required this.duration,
+    required this.isDriveConnected,
     required this.onPickFolder,
     required this.onOpenDrive,
+    required this.onSignOutDrive,
     required this.onSelectSong,
     required this.onNext,
     required this.onPrevious,
@@ -76,8 +80,28 @@ class WindowsShell extends StatelessWidget {
                   onTap: () {},
                 ),
                 _sidebarItem(
-                  Icons.cloud_outlined,
+                  isDriveConnected
+                      ? Icons.cloud_done_rounded
+                      : Icons.cloud_outlined,
                   "Google Drive",
+                  iconColor: isDriveConnected ? Colors.lightBlueAccent : null,
+                  trailing: isDriveConnected
+                      ? Tooltip(
+                          message: "Disconnect Drive account",
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.logout_rounded,
+                              size: 17,
+                              color: Colors.white54,
+                            ),
+                            hoverColor: Colors.redAccent.withValues(
+                              alpha: 0.15,
+                            ),
+                            splashRadius: 18,
+                            onPressed: onSignOutDrive,
+                          ),
+                        )
+                      : null,
                   onTap: onOpenDrive,
                 ),
                 _sidebarItem(Icons.favorite_border, "Favorites", onTap: () {}),
@@ -361,6 +385,8 @@ class WindowsShell extends StatelessWidget {
     IconData icon,
     String title, {
     bool active = false,
+    Color? iconColor,
+    Widget? trailing,
     required VoidCallback onTap,
   }) {
     return Padding(
@@ -369,7 +395,7 @@ class WindowsShell extends StatelessWidget {
         dense: true,
         leading: Icon(
           icon,
-          color: active ? Colors.purpleAccent : Colors.white70,
+          color: iconColor ?? (active ? Colors.purpleAccent : Colors.white70),
           size: 20,
         ),
         title: Text(
@@ -379,6 +405,7 @@ class WindowsShell extends StatelessWidget {
             fontWeight: active ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
+        trailing: trailing,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         tileColor: active
             ? Colors.white.withValues(alpha: 0.08)
