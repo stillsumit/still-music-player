@@ -54,6 +54,9 @@ class _MainAdaptiveScreenState extends State<MainAdaptiveScreen> {
     super.initState();
     player = Player();
 
+    // Silently restore Drive session on startup
+    driveService.trySilentLogin();
+
     player.stream.playing.listen((playing) {
       if (mounted) setState(() => isPlaying = playing);
     });
@@ -120,17 +123,23 @@ class _MainAdaptiveScreenState extends State<MainAdaptiveScreen> {
 
   // Handle Google Drive Connection & Folder Dialog
   Future<void> openDriveDialog() async {
+    // 1. If not authenticated in memory, try silent login from disk first
     if (!driveService.isAuthenticated) {
-      final success = await driveService.authenticate();
-      if (!success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Failed to authenticate with Google Drive."),
-            ),
-          );
+      final silentSuccess = await driveService.trySilentLogin();
+
+      // 2. Only launch the browser if there are no stored credentials
+      if (!silentSuccess) {
+        final success = await driveService.authenticate();
+        if (!success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Failed to authenticate with Google Drive."),
+              ),
+            );
+          }
+          return;
         }
-        return;
       }
     }
 
